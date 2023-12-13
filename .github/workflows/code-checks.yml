@@ -1,0 +1,37 @@
+name: Code formatting and lint checks
+
+on:
+  push:
+    paths:
+      - '**.py'
+
+jobs:
+  code-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v3.5.3
+
+      - name: Install poetry
+        shell: bash
+        run: pipx install poetry
+
+      - name: Setup Python
+        uses: actions/setup-python@v4.7.0
+        with:
+          python-version: '3.12'
+          cache: 'poetry'
+      
+      - name: Install dependencies
+        shell: bash
+        run: poetry install
+
+      - name: Run formatting checks
+        run: poetry run tox -e format-ci
+
+      - name: Run linter checks
+        run: poetry run tox -e lint
+
+      - name: Run tests
+        run: poetry run tox -e test

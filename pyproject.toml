@@ -1,0 +1,43 @@
+[tool.poetry]
+name = "ldctl"
+version = "0.1.0"
+description = "LaunchDarkly CLI for administrative tasks."
+authors = ["meanguy <78570571+meanguy@users.noreply.github.com>"]
+readme = "README.md"
+packages = [
+    { include = "ldctl" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pytest = "^7.4.2"
+click = "^8.1.7"
+aiohttp = "^3.9.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+isort = "^5.12.0"
+mypy = "^1.5.1"
+pep8-naming = "^0.13.3"
+tox = "^4.10.0"
+ipython = "^8.15.0"
+pytest = "^7.4.2"
+coverage = "^7.3.2"
+
+[tool.black]
+line-length = 111
+target-version = ["py312"]
+
+[tool.isort]
+combine_as_imports = true
+include_trailing_comma = true
+line_length = 111
+
+[tool.mypy]
+exclude = [
+    "^tests",
+]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
