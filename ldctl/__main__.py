@@ -2,12 +2,12 @@ import asyncio
 import functools
 import os
 import sys
-from datetime import timedelta
+from random import choices
 
 import click
 
-from ldctl import cmds
 from ldctl.api import LaunchDarklyClient
+from ldctl.logger import configure_logger
 
 
 def coroutine(func):
@@ -20,8 +20,18 @@ def coroutine(func):
 
 @click.group()
 @click.option("--api-key", default="", help="LaunchDarkly API key")
+@click.option(
+    "--log-level",
+    default="warning",
+    type=click.Choice(["debug", "info", "warning", "error", "critical"]),
+    help="Log level",
+)
 @click.pass_context
-def main(ctx: click.Context, api_key: str) -> int:
+def main(
+    ctx: click.Context,
+    api_key: str,
+    log_level: str,
+) -> int:
     """
     LaunchDarkly CLI tool for administrative tasks.
     """
@@ -33,7 +43,12 @@ def main(ctx: click.Context, api_key: str) -> int:
     if not api_key:
         api_key = click.prompt("LaunchDarkly API key")
 
-    ctx.obj["api_client"] = LaunchDarklyClient(api_key)
+    ctx.obj.update(
+        {
+            "logger": configure_logger(log_level.upper()),
+            "api_client": LaunchDarklyClient(api_key),
+        }
+    )
 
     return 0
 
@@ -73,7 +88,7 @@ async def stale_users(ctx: click.Context, since: str, pretty: bool) -> int:
     """
     from ldctl.cmds import stale_users
 
-    return await stale_users.main(ctx.obj["api_client"], since, pretty)
+    return await stale_users.main(ctx.obj["logger"], ctx.obj["api_client"], since, pretty)
 
 
 @main.command("delete-user")

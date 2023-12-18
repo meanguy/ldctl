@@ -5,8 +5,8 @@ _TIME_UNITS = {
     ("years", "year", "y"): "years",
     ("days", "day", "d"): "days",
     ("weeks", "week", "w"): "weeks",
-    ("minutes", "minute", "m"): "minutes",
-    ("months", "month", "M"): "months",
+    ("minutes", "minute", "min"): "minutes",
+    ("months", "month", "mon", "mo", "m"): "months",
     ("hours", "hour", "h"): "hours",
     ("seconds", "second", "s"): "seconds",
     ("milliseconds", "millisecond", "ms"): "milliseconds",
@@ -58,7 +58,7 @@ def parse_time_ago(s: str) -> timedelta:
     kwargs = {}
     for match in matches:
         value = int(match[0])
-        unit = match[1].lower()
+        unit = match[1]
 
         if unit not in _TIME_UNITS_MAP:
             raise ValueError(f"invalid unit: {unit}")
@@ -76,3 +76,22 @@ def parse_time_ago(s: str) -> timedelta:
         kwargs["days"] = days + years * 365 + months * 30
 
     return timedelta(**kwargs)
+
+
+def pretty_time_ago(since: timedelta) -> str:
+    if since.microseconds < 1000:
+        return f"{since.microseconds}us ago"
+    elif since.microseconds < 1000:
+        return f"{since.microseconds}ms ago"
+    elif since.seconds < 60:
+        return f"{since.seconds}s ago"
+    elif since.seconds < 3600:
+        return f"{since.seconds // 60}min ago"
+    elif since.days < 1:
+        return f"{since.seconds // 3600}h ago"
+    elif since.days < 90:
+        return f"{since.days}d ago"
+    elif since.days < 365:
+        return f"{since.days // 30}mo ago"
+    else:
+        return f"{since.days // 365}y ago"

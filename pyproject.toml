@@ -13,6 +13,7 @@ python = "^3.12"
 pytest = "^7.4.2"
 click = "^8.1.7"
 aiohttp = "^3.9.1"
+pylons = {git = "https://github.com/meanguy/pylons.git"}
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"

@@ -865,6 +865,24 @@ plugins = ["importlib-metadata"]
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pylons"
+version = "0.1.0"
+description = "Additional pylons for python projects."
+optional = false
+python-versions = "^3.12"
+files = []
+develop = false
+
+[package.dependencies]
+pytest = "^7.4.2"
+
+[package.source]
+type = "git"
+url = "https://github.com/meanguy/pylons.git"
+reference = "HEAD"
+resolved_reference = "d9e9374a9adf054de1c88525707c284b0dfc097d"
+
+[[package]]
 name = "pyproject-api"
 version = "1.6.1"
 description = "API to interact with the python pyproject.toml based projects"
@@ -1121,4 +1139,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "c52f2beb9d641f069a753c2a87c3fd41b7a94584efe19a53ee6b4df8b7e39f54"
+content-hash = "47ac9872be3ddbb0b478e3d93b14b8d02f57861fcba0a507ce1ea1f430d8c660"
