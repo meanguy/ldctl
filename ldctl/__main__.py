@@ -1,13 +1,13 @@
 import asyncio
 import functools
-import json
-import pprint
+import os
 import sys
-from datetime import datetime, timedelta, timezone
-from typing import AsyncGenerator
+from datetime import timedelta
 
-import aiohttp
 import click
+
+from ldctl import cmds
+from ldctl.api import LaunchDarklyClient
 
 
 def coroutine(func):
@@ -18,58 +18,40 @@ def coroutine(func):
     return start
 
 
-def _parse_time_since(s: str) -> timedelta:
-    if s.endswith("d"):
-        return timedelta(days=int(s[:-1]))
-    elif s.endswith("w"):
-        return timedelta(weeks=int(s[:-1]))
-    elif s.endswith("m"):
-        return timedelta(minutes=int(s[:-1]))
-    elif s.endswith("h"):
-        return timedelta(hours=int(s[:-1]))
-    else:
-        raise ValueError(f"invalid time since: {s}")
-
-
-async def _get_members_page(session: aiohttp.ClientSession, offset: int) -> dict:
-    async with session.get(f"https://app.launchdarkly.com/api/v2/members?offset={offset}") as resp:
-        return await resp.json()
-
-
-async def _get_members(session: aiohttp.ClientSession) -> AsyncGenerator[dict, None]:
-    offset = 0
-
-    while True:
-        members_page = await _get_members_page(session, offset)
-
-        if items := members_page.get("items", None):
-            for item in items:
-                yield item
-
-        if next_offset := members_page.get("_links", {}).get("next", None):
-            offset = next_offset.get("offset", None)
-        else:
-            break
-
-
-def _launchdarkly_session(api_key: str) -> aiohttp.ClientSession:
-    headers = {
-        "Authorization": api_key,
-        "Accept": "application/json",
-    }
-
-    return aiohttp.ClientSession(headers=headers)
-
-
 @click.group()
-@click.option("--api-key", required=True, help="LaunchDarkly API key")
+@click.option("--api-key", default="", help="LaunchDarkly API key")
 @click.pass_context
 def main(ctx: click.Context, api_key: str) -> int:
+    """
+    LaunchDarkly CLI tool for administrative tasks.
+    """
     ctx.ensure_object(dict)
 
-    ctx.obj["api_key"] = api_key
+    if not api_key:
+        api_key = os.environ.get("LD_API_KEY", "")
+
+    if not api_key:
+        api_key = click.prompt("LaunchDarkly API key")
+
+    ctx.obj["api_client"] = LaunchDarklyClient(api_key)
 
     return 0
+
+
+@main.command("add-environment")
+@click.argument("project_key")
+@click.pass_context
+@coroutine
+async def add_environment(ctx: click.Context, project_key: str) -> int:
+    """
+    Add an environment to a project.
+
+    Examples:
+        ldctl add-environment my-project
+    """
+    from ldctl.cmds import add_environment
+
+    return await add_environment.main(ctx.obj["api_client"], project_key)
 
 
 @main.command("stale-users")
@@ -78,32 +60,20 @@ def main(ctx: click.Context, api_key: str) -> int:
 @click.pass_context
 @coroutine
 async def stale_users(ctx: click.Context, since: str, pretty: bool) -> int:
-    now = datetime.now(timezone.utc)
-    stale_users_date = now - _parse_time_since(since)
+    """
+    List stale users.
 
-    async with _launchdarkly_session(ctx.obj["api_key"]) as session:
-        stale_users = []
+    Examples:
 
-        async for member in _get_members(session):
-            last_seen = datetime.fromtimestamp(member.get("_lastSeen", now) / 1000, tz=timezone.utc)
-            if last_seen < stale_users_date:
-                stale_users.append(member)
+        ldctl stale-users
 
-    if not pretty:
-        print(json.dumps(stale_users, indent=2))
-    else:
-        for stale_user in stale_users:
-            id_ = stale_user.get("_id", "unknown")
-            first_name = stale_user.get("firstName", "unknown")
-            last_name = stale_user.get("lastName", "unknown")
-            email = stale_user.get("email", "unknown")
-            time_since_seen = now - datetime.fromtimestamp(
-                stale_user.get("_lastSeen", now) / 1000, tz=timezone.utc
-            )
+        ldctl stale-users --since 30d
 
-            print(f"[{id_}] {first_name} {last_name} <{email}> [last seen {time_since_seen.days}d ago]")
+        ldctl stale-users --pretty
+    """
+    from ldctl.cmds import stale_users
 
-    return 0
+    return await stale_users.main(ctx.obj["api_client"], since, pretty)
 
 
 @main.command("delete-user")
@@ -111,16 +81,15 @@ async def stale_users(ctx: click.Context, since: str, pretty: bool) -> int:
 @click.pass_context
 @coroutine
 async def delete_user(ctx: click.Context, user_id: str) -> int:
-    async with _launchdarkly_session(ctx.obj["api_key"]) as session:
-        async with session.delete(f"https://app.launchdarkly.com/api/v2/members/{user_id}") as resp:
-            if resp.status == 204:
-                print(f"Deleted user {user_id}")
-                return 0
-            else:
-                print(f"Failed to delete user {user_id}")
-                pprint.pprint(await resp.json())
+    """
+    Delete a user.
 
-                return 1
+    Examples:
+        ldctl delete-user 00005313988494ac1a311f11
+    """
+    from ldctl.cmds import delete_user
+
+    return await delete_user.main(ctx.obj["api_client"], user_id)
 
 
 if __name__ == "__main__":
